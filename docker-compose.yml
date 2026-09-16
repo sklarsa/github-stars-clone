@@ -1,0 +1,65 @@
+# Gitea + PostgreSQL stack
+# Local git repo storage is bind-mounted at ./repositories (host-visible bare repos).
+# DB password comes from .env (POSTGRES_PASSWORD).
+
+services:
+  gitea:
+    image: docker.gitea.com/gitea:1.27.3
+    container_name: gitea
+    environment:
+      - USER_UID=1000            # match host uid
+      - USER_GID=1000            # match host gid
+      # Database
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=${POSTGRES_PASSWORD}
+      # Server / URLs (local-only defaults)
+      - GITEA__server__DOMAIN=localhost
+      - GITEA__server__ROOT_URL=http://localhost:3000/
+      - GITEA__server__SSH_PORT=222   # externally visible SSH port
+      - GITEA__server__SSH_LISTEN_PORT=22
+    restart: always
+    networks:
+      - gitea
+    volumes:
+      - ./gitea:/data                        # config, LFS, ssh keys
+      - ./repositories:/data/git/repositories # << git repo storage (local bind mount)
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"   # web
+      - "222:22"      # ssh (host 222 -> container 22)
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  db:
+    image: postgres:16
+    container_name: gitea-db
+    restart: always
+    environment:
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=gitea
+    networks:
+      - gitea
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitea -d gitea"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+networks:
+  gitea:
+    driver: bridge
