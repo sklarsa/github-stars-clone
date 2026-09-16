@@ -37,13 +37,13 @@ docker compose exec db pg_dump -U gitea gitea > gitea-db.sql   # DB
 tar czf repos.tgz repositories/                                # git repos
 ```
 
-## Next: star-sync service
+## Star-sync service (systemd)
 
-The systemd-timer `gitea-star-sync` turns a GitHub user's starred repos into
+The systemd timer `gitea-star-sync` turns a GitHub user's starred repos into
 Gitea **pull-mirrors** (named `owner-repo`) in a Gitea org, daily. Gitea's own
 mirror scheduler keeps them updated; the script only creates new ones.
 
-**Prereqs on the sync host:** `jq`, `curl` — `sudo apt install jq curl`
+**Prereqs on the sync host:** `jq`, `curl` (Arch: `sudo pacman -S jq curl` / `yay -S jq curl`; Debian/Ubuntu: `sudo apt install jq curl`)
 
 **Install:**
 
