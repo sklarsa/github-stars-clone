@@ -14,7 +14,11 @@
 # Optional:
 #   GITHUB_TOKEN  GitHub token for a higher API rate limit (unauthenticated
 #                 GitHub API is capped at 60 req/hr; per_page=100 keeps us well
-#                 under that for <6000 stars, so usually not needed).
+#                 under that for <6000 stars, so usually not needed). Also passed
+#                 as auth_token on migrate, making clones immune to GitHub's
+#                 anonymous-clone rate limits.
+#   SKIP_REPOS    comma/newline-separated "owner/repo" entries to never mirror
+#                 (avoids re-attempting repos too big for Gitea's migrate).
 #
 # Mirrors are named "<github-owner>-<repo-name>" so repos with the same name
 # from different owners don't collide in the org.
@@ -104,7 +108,10 @@ while : ; do
 
   while IFS=$'\t' read -r owner name clone_url; do
     mirror_name="${owner}-${name}"
-    if mirror_exists "$mirror_name"; then
+    if [ -n "${SKIP_REPOS:-}" ] && printf '%s' "$SKIP_REPOS" | grep -qF "${owner}/${name}"; then
+      log "skip ${mirror_name} (on SKIP_REPOS)"
+      skipped=$((skipped + 1))
+    elif mirror_exists "$mirror_name"; then
       log "skip ${mirror_name} (already present)"
       skipped=$((skipped + 1))
     else

@@ -20,6 +20,8 @@ services:
       - GITEA__server__ROOT_URL=http://localhost:3000/
       - GITEA__server__SSH_PORT=222   # externally visible SSH port
       - GITEA__server__SSH_LISTEN_PORT=22
+      # [git] MIGRATE timeout (seconds) - nixpkgs-class repos exceed the 180s default
+      - GITEA__git__MIGRATE=3600
     restart: always
     networks:
       - gitea

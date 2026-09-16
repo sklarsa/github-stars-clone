@@ -63,6 +63,7 @@ journalctl -u gitea-star-sync -f                         # watch
 | `GITEA_ORG` | Gitea org to create mirrors in (must exist) |
 | `GITEA_TOKEN` | Gitea API token (Settings ▸ Applications) |
 | `GITHUB_TOKEN` | GitHub token — **recommended**: clones via `auth_token` are immune to GitHub's anonymous-clone rate limits |
+| `SKIP_REPOS` | `owner/repo` entries to never mirror, e.g. `NixOS/nixpkgs` (repos too big for Gitea's migrate to survive; see below) |
 
 The daily timer (`gitea-star-sync.timer`, 04:15, `Persistent=true`) runs it
 automatically. A `Type=oneshot` service shows `inactive` between runs —
@@ -80,6 +81,11 @@ The initial run is a **full-history pull of every star** — expect hours and
 tens–hundreds of GB for a large star list. GitHub's `size` metric
 under-reports repos with LFS/large history (a repo reported at ~100 MB can
 clone to multiple GB). Monitor with `journalctl` and `du -sh repositories/`.
+
+Giant repos (e.g. `NixOS/nixpkgs`, ~5 GB / 11M objects) can exceed even the
+compose-set `GITEA__git__MIGRATE=3600` window and Gitea's migrate kills them at
+a hard ~17 min regardless. Pin them with `SKIP_REPOS` (see config table) so the
+daily timer doesn't keep re-attempting a 5 GB re-download.
 
 ## Troubleshooting: "failed" migrates that leave ghost repos
 
